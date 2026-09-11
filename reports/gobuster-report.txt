@@ -1,0 +1,15 @@
+benefits            [36m (Status: 302)[0m [Size: 28][34m [--> /login][0m
+dashboard           [36m (Status: 302)[0m [Size: 28][34m [--> /login][0m
+favicon.ico         [32m (Status: 200)[0m [Size: 334342]
+images              [36m (Status: 301)[0m [Size: 179][34m [--> /images/][0m
+js                  [36m (Status: 301)[0m [Size: 171][34m [--> /js/][0m
+learn               [36m (Status: 302)[0m [Size: 28][34m [--> /login][0m
+login               [32m (Status: 200)[0m [Size: 7208]
+Login               [32m (Status: 200)[0m [Size: 7208]
+logout              [36m (Status: 302)[0m [Size: 23][34m [--> /][0m
+profile             [36m (Status: 302)[0m [Size: 28][34m [--> /login][0m
+research            [36m (Status: 302)[0m [Size: 28][34m [--> /login][0m
+Research            [36m (Status: 302)[0m [Size: 28][34m [--> /login][0m
+signup              [32m (Status: 200)[0m [Size: 4551]
+tutorial            [32m (Status: 200)[0m [Size: 27010]
+vendor              [36m (Status: 301)[0m [Size: 179][34m [--> /vendor/][0m
