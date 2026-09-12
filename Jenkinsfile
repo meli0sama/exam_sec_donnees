@@ -20,23 +20,25 @@ pipeline {
 
         stage('Build / Preparation') {
             steps {
-                sh 'mkdir -p reports'
-                sh 'cd NodeGoat && docker-compose up -d --build'
-                sh 'sleep 20'
-                echo "✅ Application NodeGoat démarrée"
+                sh '''
+                    mkdir -p reports
+                    docker-compose up -d --build
+                    sleep 20
+                    echo "✅ Application démarrée"
+                '''
             }
         }
 
         stage('SAST + Secret Detection — Bearer CLI') {
             steps {
                 sh '''
-                    bearer scan NodeGoat \
+                    bearer scan . \
                         --scanner=sast,secrets \
                         --format html \
                         --output reports/bearer-report.html \
                         --exit-code 0
 
-                    bearer scan NodeGoat \
+                    bearer scan . \
                         --scanner=sast,secrets \
                         --format json \
                         --output reports/bearer-report.json \
@@ -48,7 +50,7 @@ pipeline {
         stage('SCA — npm audit') {
             steps {
                 sh '''
-                    docker run --rm -v "$(pwd)/NodeGoat:/app" -w /app node:18 \
+                    docker run --rm -v "$(pwd):/app" -w /app node:18 \
                         npm audit --json > reports/npm-audit.json || true
                 '''
             }
@@ -69,10 +71,10 @@ pipeline {
         stage('Secret Detection — Gitleaks') {
             steps {
                 sh '''
-                    docker run --rm -v "$(pwd)/NodeGoat:/repo" \
+                    docker run --rm -v "$(pwd):/repo" \
                         zricethezav/gitleaks:latest detect \
                         --source="/repo" \
-                        --report-path=/repo/../reports/gitleaks-report.json \
+                        --report-path=/repo/reports/gitleaks-report.json \
                         --no-git || true
                 '''
             }
@@ -80,7 +82,13 @@ pipeline {
 
         stage('Report Generation') {
             steps {
-                sh 'bash security-config/generate-report.sh'
+                sh '''
+                    if [ -f security-config/generate-report.sh ]; then
+                        bash security-config/generate-report.sh
+                    else
+                        echo "<html><body><h1>Rapport de sécurité</h1><p>Voir reports/ pour le détail (Bearer, npm audit, ZAP, Gitleaks).</p></body></html>" > reports/security-report.html
+                    fi
+                '''
                 archiveArtifacts artifacts: 'reports/**/*', fingerprint: true
                 echo "✅ Rapports archivés dans Jenkins"
             }
@@ -95,16 +103,16 @@ pipeline {
 
     post {
         always {
-            sh 'cd NodeGoat && docker-compose down || true'
+            sh 'docker-compose down || true'
 
             emailext (
-                subject: "🔒 Rapport Sécurité NodeGoat — Build #${env.BUILD_NUMBER} — ${currentBuild.currentResult}",
+                subject: "🔒 Rapport Sécurité — Build #${env.BUILD_NUMBER} — ${currentBuild.currentResult}",
                 body: """
 <html>
 <body style="font-family: Arial, sans-serif; color: #333;">
 
 <div style="background: #1a1a2e; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-    <h2 style="margin:0;">🔒 Rapport de Sécurité — OWASP NodeGoat</h2>
+    <h2 style="margin:0;">🔒 Rapport de Sécurité</h2>
     <p style="margin:8px 0 0; opacity:0.8;">Pipeline CI/CD Jenkins — Analyse automatisée</p>
 </div>
 
@@ -170,7 +178,7 @@ pipeline {
                 """,
                 mimeType: 'text/html',
                 to: 'mouhamedcissoko03@gmail.com',
-                attachmentsPattern: 'reports/security-report.html,reports/bearer-report.html'
+                attachmentsPattern: 'reports/bearer-report.html'
             )
         }
     }
