@@ -33,7 +33,7 @@ pipeline {
 
                     $DC up -d --build
                     sleep 20
-                    echo "✅ NodeGoat démarré"
+                    echo " NodeGoat démarré"
                 '''
             }
         }
