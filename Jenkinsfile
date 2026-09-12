@@ -93,7 +93,7 @@ pipeline {
                     fi
                 '''
                 archiveArtifacts artifacts: 'reports/**/*', fingerprint: true
-                echo "✅ Rapports archivés dans Jenkins"
+                echo " Rapports archivés dans Jenkins"
             }
         }
 
