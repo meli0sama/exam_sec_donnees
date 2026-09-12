@@ -14,7 +14,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
-                    url: 'https://github.com/<ton-user>/nodegoat-sec.git',
+                    url: 'https://github.com/meli0sama/exam_sec_donnees.git',
                     credentialsId: 'identifiants-github'
             }
         }
