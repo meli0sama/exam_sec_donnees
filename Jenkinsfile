@@ -1,15 +1,18 @@
 pipeline {
     agent any
 
+    options {
+        disableConcurrentBuilds()
+        timestamps()
+    }
+
     triggers {
         githubPush()
     }
 
     environment {
         // ngrok sert UNIQUEMENT à exposer Jenkins (port 8080) pour le webhook GitHub.
-        // Le scan ZAP, lui, tourne en local : le conteneur ZAP utilise --network host
-        // et partage donc la pile réseau de la machine hôte, où NodeGoat publie déjà
-        // son port 4000 (via docker-compose.yml). Pas besoin de ngrok ni d'IP de passerelle ici.
+        // ZAP tourne en --network host et atteint NodeGoat directement en local.
         APP_URL = "http://localhost:4000"
     }
 
@@ -35,62 +38,77 @@ pipeline {
                     fi
                     echo "Utilisation de: $DC"
 
+                    # Nettoyage préventif : évite les conflits de noms si un build
+                    # précédent n'a pas correctement nettoyé ses conteneurs/réseaux.
+                    $DC down --remove-orphans || true
+                    docker rm -f nodegoat-mongo nodegoat-app 2>/dev/null || true
+
                     $DC up -d --build
-                    sleep 20
+                    sleep 15
                     echo "✅ NodeGoat démarré"
                 '''
             }
         }
 
-        stage('SAST + Secret Detection — Bearer CLI') {
-            steps {
-                sh '''
-                    bearer scan . --scanner=sast,secrets --format html \
-                        --output reports/bearer-report.html --exit-code 0
+        // Les 4 outils sont indépendants entre eux une fois NodeGoat démarré :
+        // on les exécute en parallèle pour diviser le temps total par ~3-4.
+        stage('Analyses de sécurité (parallèle)') {
+            parallel {
 
-                    bearer scan . --scanner=sast,secrets --format json \
-                        --output reports/bearer-report.json --exit-code 0
-                '''
-            }
-        }
+                stage('SAST + Secrets — Bearer') {
+                    steps {
+                        sh '''
+                            # .bearerignore exclut node_modules/ (gain de temps majeur)
+                            bearer scan . --scanner=sast,secrets --format html \
+                                --output reports/bearer-report.html --exit-code 0 --quiet
 
-        stage('SCA — npm audit') {
-            steps {
-                sh '''
-                    docker run --rm -v "$(pwd):/Nodegoat/app" -w /Nodegoat/app node:18 sh -c '
-                        if [ ! -f package-lock.json ]; then
-                            echo "⚠️ package-lock.json absent — génération avant audit";
-                            npm install --package-lock-only;
-                        fi
-                        npm audit --json
-                    ' > reports/npm-audit.json || true
-                '''
-            }
-        }
+                            bearer scan . --scanner=sast,secrets --format json \
+                                --output reports/bearer-report.json --exit-code 0 --quiet
+                        '''
+                    }
+                }
 
-        stage('DAST — OWASP ZAP') {
-            steps {
-                sh '''
-                    chmod 777 reports
+                stage('SCA — npm audit') {
+                    steps {
+                        sh '''
+                            docker run --rm -v "$(pwd):/app" -w /app node:18 sh -c '
+                                if [ ! -f package-lock.json ]; then
+                                    npm install --package-lock-only;
+                                fi
+                                npm audit --json
+                            ' > reports/npm-audit.json || true
+                        '''
+                    }
+                }
 
-                    docker run --rm --network host \
-                        -v "$(pwd)/reports:/zap/wrk/:rw" \
-                        zaproxy/zap-stable zap-baseline.py \
-                        -t $APP_URL \
-                        -r zap-report.html || true
-                '''
-            }
-        }
+                stage('DAST — OWASP ZAP') {
+                    steps {
+                        sh '''
+                            chmod 777 reports
 
-        stage('Secret Detection — Gitleaks') {
-            steps {
-                sh '''
-                    docker run --rm -v "$(pwd):/repo" \
-                        zricethezav/gitleaks:latest detect \
-                        --source="/repo" \
-                        --report-path=/repo/reports/gitleaks-report.json \
-                        --no-git || true
-                '''
+                            # -m 2 : borne le spider à 2 minutes max (scan rapide pour CI).
+                            # Retire -m pour un scan complet avant ta démo finale si besoin.
+                            docker run --rm --network host \
+                                -v "$(pwd)/reports:/zap/wrk/:rw" \
+                                zaproxy/zap-stable zap-baseline.py \
+                                -t $APP_URL \
+                                -m 2 \
+                                -r zap-report.html || true
+                        '''
+                    }
+                }
+
+                stage('Secret Detection — Gitleaks') {
+                    steps {
+                        sh '''
+                            docker run --rm -v "$(pwd):/repo" \
+                                zricethezav/gitleaks:latest detect \
+                                --source="/repo" \
+                                --report-path=/repo/reports/gitleaks-report.json \
+                                --no-git || true
+                        '''
+                    }
+                }
             }
         }
 
