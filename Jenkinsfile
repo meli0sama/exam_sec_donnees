@@ -6,7 +6,11 @@ pipeline {
     }
 
     environment {
-        APP_URL = "http://host.docker.internal:4000"
+        // ngrok sert UNIQUEMENT à exposer Jenkins (port 8080) pour le webhook GitHub.
+        // Le scan ZAP, lui, tourne en local : le conteneur ZAP utilise --network host
+        // et partage donc la pile réseau de la machine hôte, où NodeGoat publie déjà
+        // son port 4000 (via docker-compose.yml). Pas besoin de ngrok ni d'IP de passerelle ici.
+        APP_URL = "http://localhost:4000"
     }
 
     stages {
@@ -33,7 +37,7 @@ pipeline {
 
                     $DC up -d --build
                     sleep 20
-                    echo " NodeGoat démarré"
+                    echo "✅ NodeGoat démarré"
                 '''
             }
         }
@@ -53,8 +57,13 @@ pipeline {
         stage('SCA — npm audit') {
             steps {
                 sh '''
-                    docker run --rm -v "$(pwd):/app" -w /app node:18 \
-                        npm audit --json > reports/npm-audit.json || true
+                    docker run --rm -v "$(pwd):/app" -w /app node:18 sh -c '
+                        if [ ! -f package-lock.json ]; then
+                            echo "⚠️ package-lock.json absent — génération avant audit";
+                            npm install --package-lock-only;
+                        fi
+                        npm audit --json
+                    ' > reports/npm-audit.json || true
                 '''
             }
         }
@@ -62,6 +71,8 @@ pipeline {
         stage('DAST — OWASP ZAP') {
             steps {
                 sh '''
+                    chmod 777 reports
+
                     docker run --rm --network host \
                         -v "$(pwd)/reports:/zap/wrk/:rw" \
                         zaproxy/zap-stable zap-baseline.py \
@@ -93,7 +104,7 @@ pipeline {
                     fi
                 '''
                 archiveArtifacts artifacts: 'reports/**/*', fingerprint: true
-                echo " Rapports archivés dans Jenkins"
+                echo "✅ Rapports archivés dans Jenkins"
             }
         }
 

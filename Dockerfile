@@ -5,7 +5,7 @@ USER root
 # curl : pour télécharger le script d'installation de Bearer
 # ca-certificates, gnupg, lsb-release : prérequis pour installer Docker CLI proprement
 RUN apt-get update && apt-get install -y \
-    git curl ca-certificates gnupg lsb-release \
+    git curl ca-certificates gnupg lsb-release python3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Installation de Bearer CLI (outil SAST + détection de secrets)
