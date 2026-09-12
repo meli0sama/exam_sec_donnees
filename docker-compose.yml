@@ -1,0 +1,26 @@
+version: "3"
+services:
+  mongodb:
+    image: mongo:4.4
+    container_name: nodegoat-mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - nodegoat-net
+
+  nodegoat:
+    build: .
+    container_name: nodegoat-app
+    ports:
+      - "4000:4000"
+    environment:
+      - MONGODB_HOST=nodegoat-mongo
+      - PORT=4000
+    depends_on:
+      - mongodb
+    networks:
+      - nodegoat-net
+
+networks:
+  nodegoat-net:
+    driver: bridge
