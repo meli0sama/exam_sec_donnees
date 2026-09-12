@@ -57,7 +57,7 @@ pipeline {
         stage('SCA — npm audit') {
             steps {
                 sh '''
-                    docker run --rm -v "$(pwd):/app" -w /app node:18 sh -c '
+                    docker run --rm -v "$(pwd):/Nodegoat/app" -w /Nodegoat/app node:18 sh -c '
                         if [ ! -f package-lock.json ]; then
                             echo "⚠️ package-lock.json absent — génération avant audit";
                             npm install --package-lock-only;
