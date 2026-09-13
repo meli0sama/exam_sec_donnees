@@ -42,7 +42,7 @@ pipeline {
 Voir le rapport en pièce jointe.
 
 Statut du build : ${BUILD_STATUS}
-Détails : ${BUILD_URL}''',
+Détails : https://nearby-surfacing-dizziness.ngrok-free.dev/job/exam_sec_données/${BUILD_NUMBER}/''',
                 to: 'mouhamedcissoko03@gmail.com',
                 attachmentsPattern: 'bearer-report.html'
             )
