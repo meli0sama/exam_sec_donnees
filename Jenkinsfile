@@ -88,7 +88,7 @@ Le scan de sécurité (Bearer CLI - SAST/Secrets, npm audit - SCA) sur NodeGoat 
 
 Statut du build : ${currentBuild.currentResult}
 Job : ${env.JOB_NAME} — Build #${env.BUILD_NUMBER}
-Détails : ${env.BUILD_URL}
+Détails : https://nearby-surfacing-dizziness.ngrok-free.dev/${BUILD.NUMBER}
 
 Voir les rapports en pièce jointe / archives Jenkins.
 """,
