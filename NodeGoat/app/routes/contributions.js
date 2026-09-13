@@ -32,6 +32,10 @@ function ContributionsHandler(db) {
         const afterTax = parseInt(req.body.afterTax);
         const roth = parseInt(req.body.roth);
 
+        // const preTax = eval(req.body.preTax);
+        // const afterTax = eval(req.body.afterTax);
+        // const roth = eval(req.body.roth);
+
         const {
             userId
         } = req.session;

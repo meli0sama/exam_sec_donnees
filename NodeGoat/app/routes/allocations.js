@@ -13,6 +13,9 @@ function AllocationsHandler(db) {
         const {
             userId
         } = req.session;
+        // const {
+        //     userId
+        // } = req.params;
         const {
             threshold
         } = req.query;
